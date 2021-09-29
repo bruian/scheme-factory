@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx jest --config=jest.config.js",
+    "test:watch": "npx jest --config=jest.config.js --watch",
     "start": "npx babel-node index.js"
   },
   "repository": {
@@ -18,7 +19,13 @@
     "validation",
     "adjusting"
   ],
-  "author": "bruianio@gmail.com",
+  "author": "Bruian Blake",
+  "maintainers": [
+    {
+      "name": "Bruian Blake",
+      "email": "bruianio@gmail.com"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/bruian/scheme-factory/issues"
@@ -29,16 +36,14 @@
     "@babel/core": "^7.15.5",
     "@babel/preset-env": "^7.15.6",
     "@babel/register": "^7.15.3",
-    "babel-loader": "^8.2.2",
-    "css-loader": "^6.3.0",
-    "html-webpack-plugin": "^5.3.2",
-    "style-loader": "^3.3.0",
-    "webpack": "^5.55.0",
-    "webpack-cli": "^4.8.0",
-    "webpack-dev-server": "^4.3.0"
+    "jest": "^27.2.4"
   },
   "dependencies": {
     "@babel/node": "^7.15.4",
-    "babel-node": "0.0.1-security"
+    "babel-node": "0.0.1-security",
+    "lodash": "^4.17.21"
+  },
+  "engines": {
+    "node": ">=10.x"
   }
 }
