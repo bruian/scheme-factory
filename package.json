@@ -1,0 +1,44 @@
+{
+  "name": "scheme-factory",
+  "version": "0.0.1",
+  "description": "Creation, validation and adjustment of a data object using a data schema",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx jest --config=jest.config.js",
+    "start": "npx babel-node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bruian/scheme-factory.git"
+  },
+  "keywords": [
+    "scheme",
+    "schema",
+    "dto",
+    "validation",
+    "adjusting"
+  ],
+  "author": "bruianio@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bruian/scheme-factory/issues"
+  },
+  "homepage": "https://github.com/bruian/scheme-factory#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.15.7",
+    "@babel/core": "^7.15.5",
+    "@babel/preset-env": "^7.15.6",
+    "@babel/register": "^7.15.3",
+    "babel-loader": "^8.2.2",
+    "css-loader": "^6.3.0",
+    "html-webpack-plugin": "^5.3.2",
+    "style-loader": "^3.3.0",
+    "webpack": "^5.55.0",
+    "webpack-cli": "^4.8.0",
+    "webpack-dev-server": "^4.3.0"
+  },
+  "dependencies": {
+    "@babel/node": "^7.15.4",
+    "babel-node": "0.0.1-security"
+  }
+}
