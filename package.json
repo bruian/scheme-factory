@@ -4,7 +4,7 @@
   "description": "Creation, validation and adjustment of a data object using a data schema",
   "main": "index.js",
   "scripts": {
-    "test": "npx jest --config=jest.config.js",
+    "test": "jest",
     "test:watch": "npx jest --config=jest.config.js --watch",
     "start": "npx babel-node index.js"
   },
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@babel/cli": "^7.15.7",
     "@babel/core": "^7.15.5",
+    "@babel/plugin-transform-runtime": "^7.15.0",
     "@babel/preset-env": "^7.15.6",
     "@babel/register": "^7.15.3",
     "jest": "^27.2.4"

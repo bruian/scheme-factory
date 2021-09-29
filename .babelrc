@@ -4,6 +4,7 @@
       "targets": "> 0.25%, not dead"
     }]
   ],
+  "plugins": ["@babel/plugin-transform-runtime"],
   "sourceMaps": "inline",
   "retainLines": true
 }
