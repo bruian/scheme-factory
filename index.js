@@ -1,39 +1,12 @@
 import {Scheme, validateValue, checkType, valueTransformator} from './src/Scheme.js';
 
-const dto = {};
-const defaultScheme = {
-  $schemeKey: 'default',
-  id: {
-    type: 'string',
-    required: true,
-    default: '',
-  },
-  name: {
-    type: 'string',
-    required: false,
-    default: 'simple name',
-  },
-  inner: {
-    type: 'object',
-    scheme: 'innerScheme',
-    traverseDefault: true,
-  },
-};
+const etalon = {passThroughAttribute: 'pass-through'};
+const defaultScheme = {$schemeKey: 'default', passThroughAttribute: {pass: true}};
+const dto = {passThroughAttribute: 'pass-through'};
 
-const innerScheme = {
-  $schemeKey: 'innerScheme',
-  name: {
-    type: 'string',
-    default: 'inner name',
-  },
-  order: {
-    type: 'number',
-    required: false,
-    default: 0,
-  },
-};
+const result = new Scheme([defaultScheme]).dataIterator(dto, 'default', 'adjust');
 
-const scheme = new Scheme([defaultScheme, innerScheme]);
-const entity = scheme.createEntity(dto, 'default');
+// const result = new Scheme([defaultScheme])
+//   .dataIterator(dto, 'default', 'adjust', {includeMissingAttributes: true, adjustTypes: true});
 
-console.log(entity);
+console.log(result);

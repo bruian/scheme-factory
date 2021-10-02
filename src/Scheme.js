@@ -1,15 +1,20 @@
 import deepClone from './helpers/deepClone.js';
-import {hasOwnProperty, isPlainObject, isFn} from './helpers/ecma.js';
+import {hasOwnProperty, isPlainObject, isFn, isArray} from './helpers/ecma.js';
+import {prepareAspectObject} from './AspectProcessing.js';
+import {ValueError} from './Errors.js';
 
 class Scheme {
     schemeDescriptions = [];
-    rootScheme = undefined;
+    attributeHandlers = [];
     methodOptions = undefined;
+    rootScheme = undefined;
     errors = {};
     caches = {};
     path = [];
     dto = undefined;
 
+    ContinueSymbol = Symbol('continue');
+    SkipResultSymbol = Symbol('skip-result');
     /**
      * Constructor
      * @param {Array|Object} schemeDescriptions
@@ -207,14 +212,21 @@ class Scheme {
 
         this.rootScheme = this.schemeDescriptions.find(el => el.$schemeKey === rootSchemeKey);
         this.path = [];
-        this.dto = dto;
+        this.dto = Array.isArray(dto) ? dto: [dto];
         this.caches = {};
         this.methodOptions = localOptions;
 
+        const state = {
+            rootScheme: this.schemeDescriptions.find(el => el.$schemeKey === rootSchemeKey),
+            path: [],
+            dto: Array.isArray(dto) ? dto : [dto],
+            caches: {},
+            methodOptions: localOptions,
+        };
+
         const elementIterator = _elementIterator.bind(this);
 
-        const localDTOs = Array.isArray(dto) ? dto: [dto];
-        const result = localDTOs.reduce((acc, el, elIndex) => {
+        const result = this.dto.reduce((acc, el, elIndex) => {
             acc.push(elementIterator(this.rootScheme.$schemeKey, el, elIndex));
             return acc;
         }, []);
@@ -249,6 +261,8 @@ class Scheme {
                         } else {
                             resultElement[key] = schemeAttribute.default;
                         }
+                    } else if (hasOwnProperty(schemeAttribute, 'type')) {
+
                     } else {
                         resultElement[key] = undefined;
                     }
@@ -308,6 +322,170 @@ class Scheme {
                 handler.func.call(this, 'adjust', {resultElement, key: handler.key, data});
             }
 
+            return resultElement;
+        }
+
+        return result;
+    }
+
+    /**
+     * Method for iterating over data
+     * @param {Array|Object} dto - data transfer object
+     * @param {String} rootSchemeKey - root schema key
+     * @param {String} aspect - data transformation aspect
+     * @param {Object} options {
+     *  excludeUnnecessaryAttributes - исключить атрибуты отсутствующие в схеме
+     *  includeMissingAttributes - добавлять атрибуты, которые отсутствуют в данных, но присутствуют в схеме
+     *  adjustTypes - приводить типы, к типам указанным в схеме
+     * }
+     * @returns {Array} - array of result objects
+     */
+    dataIterator(dto, rootSchemeKey, aspect, options) {
+        const localOptions = {
+            excludeUnnecessaryAttributes: true,
+            includeMissingAttributes: true,
+            adjustTypes: true,
+            ...options,
+        };
+
+        try {
+            aspect = prepareAspectObject(aspect);
+        } catch (err) {throw err;}
+
+        const state = {
+            aspect,
+            rootScheme: this.schemeDescriptions.find(el => el.$schemeKey === rootSchemeKey),
+            currentScheme: null,
+            path: [],
+            dto: Array.isArray(dto) ? dto : [dto],
+            caches: {},
+            methodOptions: localOptions,
+        };
+
+        const elementIterator = _elementIterator.bind(this);
+
+        const result = state.dto.reduce((acc, el, elIndex) => {
+            acc.push(elementIterator(state.rootScheme.$schemeKey, el, elIndex));
+            return acc;
+        }, []);
+
+        function _elementIterator(schemeKey, data, elIndex) {
+            let resultElement = {};
+
+            const currentScheme = this.schemeDescriptions.find(el => el.$schemeKey === schemeKey);
+            if (!currentScheme) return resultElement;
+            state.currentScheme = currentScheme;
+
+            state.path.push({schemeKey, data, index: elIndex, currentScheme});
+
+            // Before handlers
+            if (hasOwnProperty(currentScheme, '$handlerBefore') && isFn(currentScheme.$handlerBefore)) {
+                currentScheme.$handlerBefore.call(this, data, resultElement, undefined, '$handlerBefore', state);
+            }
+
+            // Attributes handlers
+            for (const attributeKey in currentScheme) {
+                if (attributeKey.charAt(0) === '$') continue;
+
+                let hasContinue = false;
+                const schemeAttribute = currentScheme[attributeKey];
+                for (const schemeAttributeKey of state.aspect.schemeAttributesOrder) {
+                    if (!hasOwnProperty(schemeAttribute, schemeAttributeKey)) continue;
+                    const attributeHandler = this.getAttributeHandler(schemeAttributeKey, state.aspect);
+
+                    let result;
+                    try {
+                        result = attributeHandler(data, resultElement, attributeKey, schemeAttributeKey, state);
+                    } catch (err) {
+                        if (err instanceof ValueError) {
+                            console.log('Make return error value');
+                        } else {
+                            throw err;
+                        }
+                    }
+
+                    if (result === this.ContinueSymbol) { hasContinue = true; break; }
+                    if (result !== this.SkipResultSymbol) resultElement[attributeKey] = result;
+                }
+
+                if (hasContinue) continue;
+
+                continue;
+                // Если в данных нет атрибута, который есть в схеме
+                if (!hasOwnProperty(data, attributeKey)) {
+                    if (!localOptions.includeMissingAttributes && !schemeAttribute.required) continue;
+
+                    // Если есть в схеме значение по умолчанию
+                    if (hasOwnProperty(schemeAttribute, 'default')) {
+                        if (isFn(schemeAttribute.default)) {
+                            resultElement[attributeKey] = schemeAttribute.default.call(
+                                this,
+                                {resultElement, attributeKey, data},
+                                currentScheme
+                            );
+                        } else {
+                            resultElement[attributeKey] = schemeAttribute.default;
+                        }
+                    } else {
+                        resultElement[attributeKey] = undefined;
+                    }
+
+                    if (!currentScheme[attributeKey].traverseDefault) continue;
+                }
+
+                // Если значение в схеме представляет другую схему
+                if (hasOwnProperty(currentScheme[attributeKey], 'scheme')) {
+                    if (data[attributeKey] === null) {
+                        resultElement[attributeKey] = null;
+                    } else if (currentScheme[attributeKey].type === 'array') {
+                        resultElement[attributeKey] = [];
+                        for (let index = 0; index < data[attributeKey].length; index++) {
+                            resultElement[attributeKey].push(elementIterator(currentScheme[attributeKey].scheme, data[attributeKey][index], index));
+                        }
+                    } else if (currentScheme[attributeKey].type === 'object') {
+                        resultElement[attributeKey] = elementIterator(
+                            currentScheme[attributeKey].scheme,
+                            isPlainObject(data[attributeKey]) ? data[attributeKey] : {}
+                        );
+                    }
+                } else {
+                    if (currentScheme[attributeKey].type === 'associatedArray') {
+                        const associatedArray = {};
+                        for (const dataKey in data[attributeKey]) {
+                            let arrayKey = dataKey;
+                            let arrayValue = data[attributeKey][dataKey];
+
+                            if (localOptions.adjustTypes) {
+                                arrayKey = valueTransformator(currentScheme[attributeKey].keyType, arrayKey);
+                                arrayValue = valueTransformator(currentScheme[attributeKey].valueType, arrayValue);
+                            }
+
+                            associatedArray[arrayKey] = arrayValue;
+                        }
+
+                        resultElement[attributeKey] = associatedArray;
+                    } else {
+                        // Если значение типизировано, то приводится к типу указанному в схеме
+                        resultElement[attributeKey] = localOptions.adjustTypes
+                            ? valueTransformator(currentScheme[attributeKey].type, data[attributeKey])
+                            : data[attributeKey];
+                    }
+                }
+            }
+
+            // Обработка значений, которые отсутствуют в схеме
+            for (const attributeKey in data) {
+                if (!hasOwnProperty(currentScheme, attributeKey) && !localOptions.excludeUnnecessaryAttributes) {
+                    resultElement[attributeKey] = data[attributeKey];
+                }
+            }
+
+            // After handlers
+            if (hasOwnProperty(currentScheme, '$handlerAfter') && isFn(currentScheme.$handlerAfter)) {
+                currentScheme.$handlerAfter.call(this, data, resultElement, undefined, '$handlerAfter', state);
+            }
+
+            state.path.pop();
             return resultElement;
         }
 
@@ -503,6 +681,14 @@ class Scheme {
     attributeConfiguration(attributeName) {
         return this.rootScheme[attributeName];
     }
+
+    getAttributeHandler(attributeKey, aspect) {
+        if (!hasOwnProperty(aspect.schemeAttributeHandlers, attributeKey))
+            return this.SkipResultSymbol;
+
+        const attributeHandler = aspect.schemeAttributeHandlers[attributeKey];
+        return attributeHandler.bind(this);
+    }
 }
 
 function validateValue(type, restrictions, value, options) {
@@ -604,21 +790,21 @@ function checkType(type, value, strictValidationType) {
 }
 
 function valueTransformator(type, value) {
-    let result = value;
-
-    if (type === null || type === undefined) return result;
-
-    if (Array.isArray(type)) {
+    if (isArray(type)) {
         // Если указано несколько типов, то пытаемся привести к первому числовому, если он указан
         for (const t of type) {
             const numberTypes = t === 'number' || t === 'integer' || t === 'float';
-            if (numberTypes && checkType(t, value, false)) {
+            if (numberTypes && !checkType(t, value, true)) {
                 return transformValue(t, value);
             }
         }
+    } else if (type === 'array' || type === 'object' || type ==='associatedArray') {
+        return this.SkipResultSymbol;
+    } else if (!checkType(type, value, true)) {
+        return transformValue(type, value);
+    } else {
+        return value;
     }
-
-    return transformValue(type, value);
 }
 
 function transformValue(type, value) {
@@ -633,8 +819,14 @@ function transformValue(type, value) {
             return parseFloat(value);
         case 'integer':
             return parseInt(value);
+        case 'undefined':
+        case undefined:
+            return undefined;
+        case 'null':
+        case null:
+            return null;
         default:
-            return value;
+            return undefined;
     }
 }
 
