@@ -7,7 +7,8 @@ const hasOwnProperties = (object, collection) => {
   );
 };
 const isFn = object => typeof object === 'function';
+const isArray = object => Array.isArray(object);
 const isPlainObject = object => object !== null && typeof object === 'object' && !Array.isArray(object);
 const isNullOrUndefined = value => value === null || value === undefined;
 
-export {hasOwnProperty, hasOwnProperties, isPlainObject, isNullOrUndefined, isFn};
+export {hasOwnProperty, hasOwnProperties, isPlainObject, isNullOrUndefined, isFn, isArray};
