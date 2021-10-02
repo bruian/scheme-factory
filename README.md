@@ -1,5 +1,10 @@
 # scheme-factory
-Creation, validation and adjustment of a data object using a data schema
+
+Creation, validation and adjustment of a data object using a data schema.
+
+# Status
+
+Still developing. Not ready for use.
 
 ## Wallaby.js
 
