@@ -1,5 +1,7 @@
-import {Scheme} from './Scheme';
-import cloneDeep from 'lodash/cloneDeep'
+import cloneDeep from 'lodash/cloneDeep';
+
+import { Scheme } from './Scheme';
+import { CriticaError } from './Errors';
 
 test('default test', () => {
   const defaultScheme = {
@@ -47,12 +49,49 @@ test('default test', () => {
   expect(result).toEqual(etalon);
 });
 
+describe('Base callings', () => {
+  describe('Constructing object', () => {
+    test('construct by default with single description', () => {
+      const schemeDescription = { $schemeKey: 'default' };
+      const SUT = new Scheme(schemeDescription);
+
+      expect(SUT).toBeInstanceOf(Scheme);
+      expect(SUT.schemeDescriptions).toEqual([schemeDescription]);
+    });
+    test('construct by default with array description', () => {
+      const SUT = new Scheme([{ $schemeKey: 'default' }]);
+
+      expect(SUT).toBeInstanceOf(Scheme);
+    });
+    test('construct without description', () => {
+      function CreateSUT() {
+        new Scheme([]);
+      }
+
+      expect(CreateSUT).toThrowError(CriticaError);
+    });
+    test.each([[1], [undefined], [{}], [null]])(
+      'construct with description is %i',
+      (a) => {
+        function createSUT() {
+          new Scheme(a);
+        }
+
+        expect(createSUT).toThrowError(CriticaError);
+      },
+    );
+  });
+});
+
 describe('Attribute types', () => {
   test('string type', () => {
-    const etalon = {testedAttribute: undefined};
-    const defaultScheme = {$schemeKey: 'default', testedAttribute: {
-      type: 'string',
-    }};
+    const etalon = { testedAttribute: undefined };
+    const defaultScheme = {
+      $schemeKey: 'default',
+      testedAttribute: {
+        type: 'string',
+      },
+    };
 
     const result = new Scheme([defaultScheme]).createEntity({}, 'default');
 
@@ -61,20 +100,23 @@ describe('Attribute types', () => {
 });
 
 describe('dataIterator: data adjusting', () => {
-  describe.only('Default argument transformation', () => {
+  describe('Default argument transformation', () => {
     test('Dont pass attribute when no scheme-attribute', () => {
       const etalon = {};
-      const defaultScheme = {$schemeKey: 'default'};
-      const dto = {passThroughAttribute: 'pass-through'};
+      const defaultScheme = { $schemeKey: 'default' };
+      const dto = { passThroughAttribute: 'pass-through' };
 
       const result = new Scheme([defaultScheme]).dataIterator(dto, 'default', 'adjust');
 
       expect(result).toEqual([etalon]);
     });
     test('Pass attribute', () => {
-      const etalon = {passThroughAttribute: 'pass-through'};
-      const defaultScheme = {$schemeKey: 'default', passThroughAttribute: {pass: true}};
-      const dto = {passThroughAttribute: 'pass-through'};
+      const etalon = { passThroughAttribute: 'pass-through' };
+      const defaultScheme = {
+        $schemeKey: 'default',
+        passThroughAttribute: { pass: true },
+      };
+      const dto = { passThroughAttribute: 'pass-through' };
 
       const result = new Scheme(defaultScheme).dataIterator(dto, 'default', 'adjust');
 
@@ -82,8 +124,11 @@ describe('dataIterator: data adjusting', () => {
     });
     test('Dont pass attribute', () => {
       const etalon = {};
-      const defaultScheme = {$schemeKey: 'default', passThroughAttribute: {pass: false}};
-      const dto = {passThroughAttribute: 'pass-through'};
+      const defaultScheme = {
+        $schemeKey: 'default',
+        passThroughAttribute: { pass: false },
+      };
+      const dto = { passThroughAttribute: 'pass-through' };
 
       const result = new Scheme(defaultScheme).dataIterator(dto, 'default', 'adjust');
 
@@ -91,8 +136,11 @@ describe('dataIterator: data adjusting', () => {
     });
     test('Skip processing other attributes when pass is false', () => {
       const etalon = {};
-      const defaultScheme = {$schemeKey: 'default', passThroughAttribute: {pass: false, type: 'string'}};
-      const dto = {passThroughAttribute: 10};
+      const defaultScheme = {
+        $schemeKey: 'default',
+        passThroughAttribute: { pass: false, type: 'string' },
+      };
+      const dto = { passThroughAttribute: 10 };
 
       const result = new Scheme(defaultScheme).dataIterator(dto, 'default', 'adjust');
 
@@ -119,23 +167,29 @@ describe('dataIterator: data adjusting', () => {
       };
       const defaultScheme = {
         $schemeKey: 'default',
-        stringAttribute: {type: 'string'},
-        numberAttribute: {type: 'number'},
-        booleanAttribute: {type: 'boolean'},
-        floatAttribute: {type: 'float'},
-        integerAttribute: {type: 'integer'},
-        arrayAttribute: {type: 'array'},
-        associatedArrayAttribute: {type: 'associatedArray'},
-        objectAttribute: {type: 'object'},
-        undefinedAttribute: {type: undefined},
-        nullAttribute: {type: null},
-        defaultAttribute: {type: ''},
-        multipleTypesAttribute: {type: ['string', 'number', 'boolean']},
-        handlerTypeAttribute: {type: function () { return Boolean(true) }},
+        stringAttribute: { type: 'string' },
+        numberAttribute: { type: 'number' },
+        booleanAttribute: { type: 'boolean' },
+        floatAttribute: { type: 'float' },
+        integerAttribute: { type: 'integer' },
+        arrayAttribute: { type: 'array' },
+        associatedArrayAttribute: { type: 'associatedArray' },
+        objectAttribute: { type: 'object' },
+        undefinedAttribute: { type: undefined },
+        nullAttribute: { type: null },
+        defaultAttribute: { type: '' },
+        multipleTypesAttribute: { type: ['string', 'number', 'boolean'] },
+        handlerTypeAttribute: {
+          type: function () {
+            return Boolean(true);
+          },
+        },
       };
 
-      const result = new Scheme([defaultScheme])
-        .dataIterator({}, 'default', 'adjust', {includeMissingAttributes: true, adjustTypes: true});
+      const result = new Scheme([defaultScheme]).dataIterator({}, 'default', 'adjust', {
+        includeMissingAttributes: true,
+        adjustTypes: true,
+      });
 
       expect(result).toEqual([etalon]);
     });
@@ -172,23 +226,23 @@ describe('dataIterator: data adjusting', () => {
       };
       const defaultScheme = {
         $schemeKey: 'default',
-        stringAttribute: {type: 'string'},
-        likeAString: {type: 'string'},
-        likeANumber: {type: 'number'},
-        likeAFloat: {type: 'float'},
-        likeAInteger: {type: 'integer'},
-        likeABoolean: {type: 'boolean'},
-        likeABooleanFromNumber: {type: 'boolean'},
-        likeABooleanFromObject: {type: 'boolean'},
-        likeABooleanFromEmptyString: {type: 'boolean'},
-        likeABooleanFromUndefined: {type: 'boolean'},
-        likeABooleanFromNull: {type: 'boolean'},
-        likeANullFromString: {type: null},
-        likeAUndefinedFromString: {type: undefined},
-        likeAUnknownType: {type: 'unkno'},
-        forgottenAttribute: {type: 'string'},
-        passThroughAttribute: {pass: true},
-        noPassThroughAttribute: {pass: false},
+        stringAttribute: { type: 'string' },
+        likeAString: { type: 'string' },
+        likeANumber: { type: 'number' },
+        likeAFloat: { type: 'float' },
+        likeAInteger: { type: 'integer' },
+        likeABoolean: { type: 'boolean' },
+        likeABooleanFromNumber: { type: 'boolean' },
+        likeABooleanFromObject: { type: 'boolean' },
+        likeABooleanFromEmptyString: { type: 'boolean' },
+        likeABooleanFromUndefined: { type: 'boolean' },
+        likeABooleanFromNull: { type: 'boolean' },
+        likeANullFromString: { type: null },
+        likeAUndefinedFromString: { type: undefined },
+        likeAUnknownType: { type: 'unkno' },
+        forgottenAttribute: { type: 'string' },
+        passThroughAttribute: { pass: true },
+        noPassThroughAttribute: { pass: false },
         // floatAttribute: {type: 'float'},
         // integerAttribute: {type: 'integer'},
         // arrayAttribute: {type: 'array'},
@@ -219,8 +273,10 @@ describe('dataIterator: data adjusting', () => {
         noPassThroughAttribute: 'no pass',
       };
 
-      const result = new Scheme([defaultScheme])
-        .dataIterator(dto, 'default', 'adjust', {includeMissingAttributes: true, adjustTypes: true});
+      const result = new Scheme([defaultScheme]).dataIterator(dto, 'default', 'adjust', {
+        includeMissingAttributes: true,
+        adjustTypes: true,
+      });
 
       expect(result).toEqual([etalon]);
     });

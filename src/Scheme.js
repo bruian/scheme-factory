@@ -20,13 +20,28 @@ class Scheme {
    * @param {Array|Object} schemeDescriptions
    */
   constructor(schemeDescriptions) {
-    if (!schemeDescriptions || typeof schemeDescriptions !== 'object') {
+    if (!Array.isArray(schemeDescriptions)) schemeDescriptions = [schemeDescriptions];
+
+    if (schemeDescriptions.length === 0) {
       throw new CriticalError(
         'Invalid schemeDescriptions argument. Should ba a plain object, describing a used schemes',
       );
     }
 
-    if (!Array.isArray(schemeDescriptions)) schemeDescriptions = [schemeDescriptions];
+    for (const schemeDescription of schemeDescriptions) {
+      if (!schemeDescription || !isPlainObject(schemeDescription)) {
+        throw new CriticalError(
+          'Invalid schemeDescriptions argument. Should ba a plain object, describing a used schemes',
+        );
+      }
+
+      if (!hasOwnProperty(schemeDescription, '$schemeKey')) {
+        throw new CriticalError(
+          'Invalid scheme-description object, must have "$schemeKey" attribute',
+        );
+      }
+    }
+
     this.schemeDescriptions = schemeDescriptions;
   }
 
